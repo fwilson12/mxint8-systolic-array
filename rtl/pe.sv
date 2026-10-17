@@ -1,4 +1,8 @@
 
+
+`timescale 1ns/1ps
+
+
 module pe #(
     parameter int W      = 8,
     parameter int PSUM_W = 24   // 32 MACs of (-128 * -128) needs 21 bits signed
@@ -17,7 +21,7 @@ module pe #(
     input logic signed [W-1:0] activation_in,
     input logic                act_valid_in,
     input logic                weight_swap_in,
-    input logic                pe_enabled,    // row-wide
+    input logic                pe_enabled,    // array-wide
     
     // to south
     output logic signed [PSUM_W-1:0] psum_out,
