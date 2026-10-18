@@ -50,6 +50,8 @@ def mxint8test(wBlock: list[int], aBlock: list[int]) -> int:
     eW = getE(wBlock)
     eA = getE(aBlock)
 
+    print(f"\nWeight Scale: {eW - 127} | Activation Scale: {eA - 127}\n")
+
     f_wBlock = quantize(wBlock, eW)
     f_aBlock = quantize(aBlock, eA)
 
@@ -75,11 +77,11 @@ def random_test():
     acts = []
 
     for _ in range(BLOCK_SIZE):
-        weights.append(random.gauss(0, 1))
+        weights.append(random.gauss(0, 5 * random.random()))
         acts.append(random.gauss(0, 1))
 
 
-    print(f"Raw Weights: {weights} \nRaw Activations: {acts}\n\n")
+    # print(f"Raw Weights: {weights} \nRaw Activations: {acts}\n\n")
 
     mx_res = mxint8test(weights, acts)
     print(f"mxint8 result: {mx_res}\n")
