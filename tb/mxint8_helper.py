@@ -45,6 +45,7 @@ def mxDotProd(wBlock: list[int], aBlock: list[int], eW: int, eA: int) -> int:
 
 
 def mxint8test(wBlock: list[int], aBlock: list[int]) -> int:
+    # microscale and quantize blocks, calculate their dot prod and return unscaled result
 
     eW = getE(wBlock)
     eA = getE(aBlock)
@@ -60,8 +61,8 @@ def mxint8test(wBlock: list[int], aBlock: list[int]) -> int:
     return mx_test
 
 
-def refTest(weights: list[int], acts: list[int]) -> float:
-
+def refTest(weights: list[float], acts: list[float]) -> float:
+    # standard float dot product for comparison
     prod = sum([w * a for w, a in zip(weights, acts)])
 
     return prod
@@ -69,13 +70,13 @@ def refTest(weights: list[int], acts: list[int]) -> float:
 
 
 def random_test():
-
+    # generate random weight & activation blocks, microscale and quantize, calculate their unscaled dot product, and compare to full-precision reference
     weights = []
     acts = []
 
-    for i in range(BLOCK_SIZE):
-        weights.append(random.randint(LOW_BOUND, UPPER_BOUND) * random.gauss(0, 1))
-        acts.append(random.randint(LOW_BOUND, UPPER_BOUND) * random.gauss(0, 1))
+    for _ in range(BLOCK_SIZE):
+        weights.append(random.gauss(0, 1))
+        acts.append(random.gauss(0, 1))
 
 
     print(f"Raw Weights: {weights} \nRaw Activations: {acts}\n\n")
@@ -86,14 +87,14 @@ def random_test():
     ref_res = refTest(weights, acts)
     print(f"expected result: {ref_res}\n")
 
-    print(f"Error: {(mx_res - ref_res) / ref_res * 100}% | Absolute error: {mx_res - ref_res}")
+
+    # use abs for normalized error analysis
+    weights = [abs(w) for w in weights]
+    acts = [abs(a) for a in acts]
+    ref_mag = refTest(weights, acts)
+    print(f"Error: {(mx_res - ref_res) / ref_mag * 100}% | Absolute error: {mx_res - ref_res}")
 
 
 if __name__ == '__main__':
     random_test()
 
-
-
-
-
-# n - 1 activation layer -> microscale -> dot prod with microscaled weights -> collect unscaled ints -> unscale
