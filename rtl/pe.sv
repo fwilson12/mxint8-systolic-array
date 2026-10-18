@@ -5,9 +5,8 @@
 
 module pe #(
     parameter int W      = 8,
-    parameter int PSUM_W = 24   // 32 MACs of (-128 * -128) needs 21 bits signed
+    parameter int PSUM_W = 17   // 4 MACs of (-127 * -127) needs 17 bits signed
 )(
-
 
     input logic clk,
     input logic rst,
@@ -64,7 +63,7 @@ module pe #(
                 // multiply-accumulate
                 if ( act_valid_in ) psum <= psum_in + weight_active * activation_in;
                 
-                // incoming bubble, gate the mul
+                // incoming bubble, ignore the mul
                 else psum <= psum_in;
 
                 // update registers
