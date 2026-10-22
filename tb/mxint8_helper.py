@@ -1,6 +1,8 @@
 import random   
 import math
 
+import struct
+
 
 BLOCK_SIZE = 16
 LOW_BOUND = -127 # while the minimum value in Q2.6 is -2, for symmetry we forbid the use of 
@@ -9,29 +11,41 @@ UPPER_BOUND = 127
 EXP_BIAS = 127
 FRAC_BITS = 6
 
+# hardware uses fp32, but the default in python is fp64. used locally only in golden model
+def to_fp32(x: float) -> float:
+    # compress x to a 4-byte ieee fp32, read the compressed fp32 back as a python float64
+    return struct.unpack('f', struct.pack('f', x))[0]
 
-def clamp(min, max, num):
-    # helper that saturates integer-formatted values to a specified range
-    return min if num < min else (max if num > max else num)
+# turn python fp64 into the 32-bit fp32 string the hardware expects. used for cocotb driver 
+def fp32_bits(x: float):
+    # compress py fp64 to 4-byte fp32, read as uint32
+    return struct.unpack('I', struct.pack('f', x))[0]
 
-def getE(vector: list[int]) -> int:
+def getE(vector: list[float]) -> int:
     # find & return the microscaled block (biased) exponent of a block of integers
 
-    bigNum = max(abs(comp) for comp in vector) # used to avoid unnecessary calculations
-    bigE = math.floor(math.log2(bigNum)) # stores the block exponent, determined by the greatest power of two we can divide each value by : the quantized block values are within [-2, ~1.95)
+    bigNum = max(abs(comp) for comp in vector) # avoid unnecessary calculations
 
-    return clamp(0, 255, bigE + EXP_BIAS) # exponents stored in u_int8 format
+    # prevent taking the log of 0 if we see an all-zero block, which should theoretically never happen
+    if bigNum == 0: raise ValueError("All zero block!")
+
+    # stores the block exponent, determined by the greatest power of two we can divide each value by : the quantized block values are within (-1.98, ~1.98)
+    bigE = math.floor(math.log2(bigNum))
+
+    return min(bigE + EXP_BIAS, 255) # exponents stored in u_int8 format
 
 
-def quantize(vector: list[int], exp: int) -> list[int]:
+def quantize(vector: list[float], exp: int) -> list[int]:
     # scale each block | note: exp is biased w/ 127
 
     # convert float values in a block into their microscaled values; a value between +- ~1.98 represented as an 8 bit Q2.6 
-    # value, which the hardware treats like plain int8s (1.98 = x7F = 64, -1.98 = xFE = -127)
-    mxBlock = [round(clamp(LOW_BOUND, UPPER_BOUND, (num / 2**(exp - EXP_BIAS)) * 64)) for num in vector] 
-    # note: values won't be greater than 127 due to the way the block exponent is calculated, but values below -127 saturate to mimic hardware int8 clamping  
-
-    return mxBlock
+    # value, which the hardware treats like plain int8s (1.98 = x7F = 64, -1.98 = x81 = -127)
+    mxBlock = []
+    for num in vector:
+        scaled = num / 2**(exp - EXP_BIAS) * 2**FRAC_BITS
+        mag = min(math.floor(abs(scaled) + 0.5), UPPER_BOUND)   # round half up, saturate
+        mxBlock.append(-mag if scaled < 0 else mag)
+    return mxBlock    # note: values won't be greater than 127 due to the way the block exponent is calculated, but values below -127 saturate to mimic hardware int8 clamping  
 
 
 
@@ -58,7 +72,7 @@ def mxint8test(wBlock: list[int], aBlock: list[int]) -> int:
 
     print(f"Quantized Weights: {f_wBlock}\nQuantized Activations: {f_aBlock} \n\n")
 
-    mx_test = mxDotProd(f_aBlock, f_wBlock, eA, eW)
+    mx_test = mxDotProd(f_wBlock, f_aBlock, eA, eW)
 
     return mx_test
 
@@ -77,8 +91,8 @@ def random_test():
     acts = []
 
     for _ in range(BLOCK_SIZE):
-        weights.append(random.gauss(0, 5 * random.random()))
-        acts.append(random.gauss(0, 1))
+        weights.append(to_fp32(random.gauss(0, 5 * random.random())))
+        acts.append(to_fp32(random.gauss(0, 1)))
 
 
     # print(f"Raw Weights: {weights} \nRaw Activations: {acts}\n\n")
