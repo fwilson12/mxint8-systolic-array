@@ -5,7 +5,7 @@ import struct
 
 
 BLOCK_SIZE = 16
-LOW_BOUND = -127 # while the minimum value in Q2.6 is -2, for symmetry we forbid the use of 
+LOW_BOUND = -127 # while the minimum value in Q2.6 is -2, for symmetry we saturate both positive and negative magnitudes to 127
 UPPER_BOUND = 127
 
 EXP_BIAS = 127
@@ -39,7 +39,7 @@ def quantize(vector: list[float], exp: int) -> list[int]:
     # scale each block | note: exp is biased w/ 127
 
     # convert float values in a block into their microscaled values; a value between +- ~1.98 represented as an 8 bit Q2.6 
-    # value, which the hardware treats like plain int8s (1.98 = x7F = 64, -1.98 = x81 = -127)
+    # value, which the hardware treats like plain int8s (1.98 = x7F = 127, -1.98 = x81 = -127)
     mxBlock = []
     for num in vector:
         scaled = num / 2**(exp - EXP_BIAS) * 2**FRAC_BITS

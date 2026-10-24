@@ -21,7 +21,7 @@ module fp32_to_mxint8 #(
         to get in terms of a right shift: {1, f} * 2^-(17 + e - E) or a right shift of 17 + e - E. 
         note that since e >= E, we'll always shift rightward at least 17 bits.
         Since we're shifting a 24 bit value, the fractional bits of the result will be at the 25th bit from the msb, and 
-        the integer value we want is in the 8 bits above the decimal place. This means we need to make the result register 24 + 
+        the integer value we want is in the 8 bits above the decimal place.
     */
     logic [7:0]  fp_E;
     logic [8:0] shift_amt; 
@@ -44,7 +44,7 @@ module fp32_to_mxint8 #(
 
         // output is zero for any subnormal values (fp exp == x00) 
         if ( fp_E == 8'h00 ) mxint8 = 8'h00;
-        // saturate if we rounded to 128 (symettric, |127| max for pos and neg)
+        // saturate if we rounded to 128 (symmetric, |127| max for pos and neg)
         else if ( mag > 8'd127 ) mxint8 =  negative ? 8'h81 : 8'h7F;
         // standard case 
         else mxint8 = negative ? ~mag + 8'b1 : mag;
